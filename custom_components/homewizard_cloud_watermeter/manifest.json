@@ -1,0 +1,11 @@
+{
+    "domain": "homewizard_cloud_watermeter",
+    "name": "HomeWizard Cloud Watermeter",
+    "documentation": "https://github.com/pyrech/hacs_custom_repository/homewizard_cloud_watermeter",
+    "dependencies": [],
+    "codeowners": ["@pyrech"],
+    "config_flow": true,
+    "iot_standard": "cloud",
+    "version": "0.1.0",
+    "requirements": ["httpx>=0.20.0"]
+  }
