@@ -17,7 +17,7 @@ class HomeWizardCloudConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     def __init__(self):
         """Initialize the flow."""
-        self._api = None
+        # We store credentials and locations in the flow instance to pass between steps
         self._data = {}
         self._locations = {}
 
@@ -26,7 +26,6 @@ class HomeWizardCloudConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors = {}
 
         if user_input is not None:
-            # Get the aiohttp session from Home Assistant
             session = async_get_clientsession(self.hass)
             
             # Initialize our API client with user credentials
@@ -36,12 +35,11 @@ class HomeWizardCloudConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 session
             )
 
-            # Validate credentials against the token endpoint
-            if await self._api.async_authenticate():
+            if await api.async_authenticate():
                 self._data.update(user_input)
+                # Success: go to location selection
                 return await self.async_step_location()
             else:
-                # If authentication failed, show an error message
                 errors["base"] = "invalid_auth"
 
         # Form schema for the UI
@@ -58,6 +56,14 @@ class HomeWizardCloudConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Handle the second step: Select Location."""
         errors = {}
         
+        # We need the API again to fetch locations or validate
+        session = async_get_clientsession(self.hass)
+        api = HomeWizardCloudApi(
+            self._data[CONF_EMAIL], 
+            self._data[CONF_PASSWORD], 
+            session
+        )
+
         if user_input is not None:
             location_id = user_input[CONF_LOCATION_ID]
             location_name = self._locations[location_id]
@@ -71,10 +77,18 @@ class HomeWizardCloudConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 data={**self._data, "home_id": location_id}
             )
 
+        # Re-authenticate to ensure token is fresh for fetching locations
+        await api.async_authenticate()
+
         # Fetch locations from API
-        locations_data = await self._api.async_get_locations()
+        locations_data = await api.async_get_locations()
         if not locations_data:
             return self.async_abort(reason="no_locations")
+
+        self._locations = {
+            loc["id"]: f"{loc.get('name', 'Home')} ({loc.get('location', 'No address')})" 
+            for loc in locations_data
+        }
 
         # Map ID to Name for the dropdown
         self._locations = {loc["id"]: loc["name"] for loc in locations_data}
