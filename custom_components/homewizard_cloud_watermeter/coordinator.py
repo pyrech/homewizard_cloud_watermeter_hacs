@@ -14,11 +14,12 @@ from homeassistant.util import dt as dt_util
 from homeassistant.const import UnitOfVolume
 
 from .const import DOMAIN
+from .api import HomeWizardCloudApi
 
 _LOGGER = logging.getLogger(__name__)
 
 class HomeWizardCloudDataUpdateCoordinator(DataUpdateCoordinator):
-    def __init__(self, hass, api, home_id):
+    def __init__(self, hass, api: HomeWizardCloudApi, home_id: int):
         self.api = api
         self.home_id = home_id
         self._pending_stats = None
@@ -31,7 +32,10 @@ class HomeWizardCloudDataUpdateCoordinator(DataUpdateCoordinator):
 
     async def _async_update_data(self):
         devices_data = await self.api.async_get_devices(self.home_id)
-        if not devices_data or "errors" in devices_data:
+        if not devices_data:
+            raise UpdateFailed(f"Error fetching HomeWizard devices.")
+
+        if "errors" in devices_data:
             raise UpdateFailed(f"Error fetching HomeWizard devices: {devices_data.get('errors')}")
 
         devices = devices_data.get("data", {}).get("home", {}).get("devices", [])
@@ -88,7 +92,7 @@ class HomeWizardCloudDataUpdateCoordinator(DataUpdateCoordinator):
 
         return data
 
-    async def async_inject_cleaned_stats(self, values, device):
+    async def async_inject_cleaned_stats(self, values: list, device: dict):
         """Clean data and inject into HA statistics with daily block handling."""
         statistic_id = f"{DOMAIN}:{device['sanitized_identifier']}_total"
 

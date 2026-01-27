@@ -103,7 +103,7 @@ class HomeWizardCloudApi:
             _LOGGER.error("Error fetching HomeWizard data: %s", ex)
             return None
 
-    async def call_graphql(self, payload: dict, ) -> dict:
+    async def call_graphql(self, payload: dict) -> dict:
         """Call graphql endpoint with given payload."""
         url = "https://api.homewizard.energy/v1/graphql"
         headers = await self.get_headers()
